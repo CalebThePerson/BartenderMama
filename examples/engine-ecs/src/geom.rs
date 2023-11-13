@@ -1,5 +1,7 @@
-use frenderer::{GPUCamera, Transform};
+pub use bytemuck::Zeroable;
+use frenderer::{Camera2D, Transform};
 pub use glam::*;
+use std::ops::Add;
 
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, bytemuck::Zeroable, bytemuck::Pod, Debug)]
@@ -13,6 +15,25 @@ pub struct Rect {
 pub struct AABB {
     pub center: Vec2,
     pub size: Vec2,
+}
+
+impl Add<Vec2> for AABB {
+    type Output = AABB;
+
+    fn add(self, rhs: Vec2) -> Self::Output {
+        Self {
+            center: self.center + rhs,
+            ..self
+        }
+    }
+}
+
+impl Add<[f32; 2]> for AABB {
+    type Output = AABB;
+
+    fn add(self, rhs: [f32; 2]) -> Self::Output {
+        self + Vec2::from(rhs)
+    }
 }
 
 impl From<AABB> for Transform {
@@ -39,18 +60,18 @@ impl From<Rect> for Transform {
     }
 }
 
-impl From<Rect> for GPUCamera {
+impl From<Rect> for Camera2D {
     fn from(val: Rect) -> Self {
-        GPUCamera {
+        Camera2D {
             screen_pos: val.corner.into(),
             screen_size: val.size.into(),
         }
     }
 }
 
-impl From<AABB> for GPUCamera {
+impl From<AABB> for Camera2D {
     fn from(val: AABB) -> Self {
-        GPUCamera {
+        Camera2D {
             screen_pos: (val.center - val.size / 2.0).into(),
             screen_size: val.size.into(),
         }

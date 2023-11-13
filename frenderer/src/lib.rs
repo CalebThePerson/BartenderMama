@@ -24,7 +24,7 @@
 
 pub mod input;
 
-/// Whether storage buffers should be used (currently only WebGL uses instanced drawing instead)
+/// Whether storage buffers should be used (currently only WebGL uses instance buffers instead)
 #[cfg(not(feature = "webgl"))]
 pub(crate) const USE_STORAGE: bool = true;
 #[cfg(feature = "webgl")]
@@ -35,7 +35,9 @@ pub use gpu::WGPU;
 pub use wgpu;
 
 mod sprites;
-pub use sprites::{GPUCamera, SheetRegion, SpriteRenderer, Transform};
+pub use sprites::{Camera2D, SheetRegion, SpriteRenderer, Transform};
+pub mod meshes;
+pub use meshes::{Camera3D, Transform3D};
 
 /// A runtime for frenderer; mainly wraps an async runtime, but also sets up logging, etc.
 /// In the future it might be responsible for setting up WGPU/providing a rendering context as well.
@@ -69,3 +71,17 @@ pub type Frenderer = Renderer<PollsterRuntime>;
 pub type Frenderer = Renderer<WebRuntime>;
 pub mod bitfont;
 pub use bitfont::BitFont;
+
+fn range<R: std::ops::RangeBounds<usize>>(r: R, hi: usize) -> std::ops::Range<usize> {
+    let low = match r.start_bound() {
+        std::ops::Bound::Included(&x) => x,
+        std::ops::Bound::Excluded(&x) => x + 1,
+        std::ops::Bound::Unbounded => 0,
+    };
+    let high = match r.end_bound() {
+        std::ops::Bound::Included(&x) => x + 1,
+        std::ops::Bound::Excluded(&x) => x,
+        std::ops::Bound::Unbounded => hi,
+    };
+    low..high
+}
