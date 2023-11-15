@@ -34,6 +34,7 @@ const APPLE_SIZE: Vec2 = Vec2 { x: 16.0, y: 16.0 };
 const APPLE_MAX: usize = 128;
 const APPLE_INTERVAL: std::ops::Range<u32> = 1..10;
 const WALL_UVS: SheetRegion = SheetRegion::new(0, 0, 480, 12, 8, 8);
+const SHELF_UVS: SheetRegion = SheetRegion::new(0, 1, 50, 480, 264, 16);
 const APPLE_SPEED_RANGE: std::ops::Range<f32> = (-2.0)..(-0.5);
 
 struct Game {
@@ -77,7 +78,7 @@ impl engine::Game for Game {
 
         //Spawning the bar in
         engine.spawn(WallBundle(
-            Sprite(spritesheet, SheetRegion::new(0, 1, 32, 480, 127, 47)),
+            Sprite(spritesheet, SheetRegion::new(0, 36, 1, 480, 127, 47)),
             Transform {
                 x: W / 2.0,
                 y: 15.0,
@@ -95,25 +96,11 @@ impl engine::Game for Game {
             }),
         ));
 
-        // Spawns a little dood
+        make_shelf(spritesheet, engine, W / 2.0, 60.0 + 20.0, 160.0, 16.0);
+        make_shelf(spritesheet, engine, W / 2.0, 100.0 + 20.0, 160.0, 16.0);
 
-        // let guy = engine.spawn(GuyBundle(
-        //     Sprite(spritesheet, SheetRegion::new(0, 16, 480, 8, 16, 16)),
-        //     Transform {
-        //         x: W / 2.0,
-        //         y: 24.0,
-        //         w: GUY_SIZE.x as u16,
-        //         h: GUY_SIZE.y as u16,
-        //         rot: 0.0,
-        //     },
-        //     Pushable::default(),
-        //     BoxCollision(AABB {
-        //         center: Vec2::ZERO,
-        //         size: GUY_SIZE,
-        //     }),
-        //     Physics { vel: Vec2::ZERO },
-        //     Guy(),
-        // ));
+        // Spawns a little dood\
+        engine.renderer.sprites.add
 
         // floor
         // make_wall(spritesheet, engine, W / 2.0, 8.0, W, 16.0);
@@ -237,7 +224,7 @@ fn main() {
     Engine::new(winit::window::WindowBuilder::new()).run();
 }
 
-fn make_wall(
+fn make_shelf(
     spritesheet: engine_ecs::Spritesheet,
     engine: &mut Engine,
     x: f32,
@@ -246,7 +233,7 @@ fn make_wall(
     h: f32,
 ) -> Entity {
     engine.spawn(WallBundle(
-        Sprite(spritesheet, WALL_UVS),
+        Sprite(spritesheet, SHELF_UVS),
         Transform {
             x,
             y,
@@ -257,7 +244,7 @@ fn make_wall(
         Solid::default(),
         BoxCollision(AABB {
             center: Vec2::ZERO,
-            size: Vec2 { x: w, y: h },
+            size: Vec2 { x: 160.0, y: h },
         }),
     ))
 }
