@@ -1,3 +1,4 @@
+use engine::Spritesheet;
 use engine_ecs as engine;
 use engine_ecs::{components::*, geom::*, Camera, SheetRegion};
 use hecs::Entity;
@@ -15,7 +16,7 @@ struct WallBundle(Sprite, Transform, Solid, BoxCollision);
 struct GuyBundle(Sprite, Transform, Pushable, BoxCollision, Physics, Guy);
 #[derive(hecs::Bundle)]
 struct AppleBundle(
-    Sprite,
+    Sprite, //
     Transform,
     SolidPushable,
     BoxCollision,
@@ -38,7 +39,7 @@ const APPLE_SPEED_RANGE: std::ops::Range<f32> = (-2.0)..(-0.5);
 struct Game {
     apple_timer: u32,
     score: u32,
-    guy: Entity,
+    // guy: Entity,
     spritesheet: engine::Spritesheet,
     font: engine::BitFont,
 }
@@ -59,41 +60,67 @@ impl engine::Game for Game {
                 .into_rgba8()
         };
         #[cfg(not(target_arch = "wasm32"))]
-        let sprite_img = image::open("content/demo.png").unwrap().into_rgba8();
-        let spritesheet = engine.add_spritesheet(&[&sprite_img], Some("demo spritesheet"));
-        engine.spawn(DecoBundle(
-            Sprite(spritesheet, SheetRegion::new(0, 0, 0, 16, 640, 480)),
+        // let sprite_img = image::open("content/demo.png").unwrap().into_rgba8();
+        // let spritesheet = engine.add_spritesheet(&[&sprite_img], Some("demo spritesheet"));
+        // engine.spawn(DecoBundle(
+        //     Sprite(spritesheet, SheetRegion::new(0, 0, 0, 16, 640, 480)),
+        //     Transform {
+        //         x: W / 2.0,
+        //         y: H / 2.0,
+        //         w: W as u16,
+        //         h: H as u16,
+        //         rot: 0.0,
+        //     },
+        // ));
+        let bar_img = image::open("content/bar_sheet.png").unwrap().into_rgba8();
+        let spritesheet = engine.add_spritesheet(&[&bar_img], Some("The Bar"));
+
+        //Spawning the bar in
+        engine.spawn(WallBundle(
+            Sprite(spritesheet, SheetRegion::new(0, 1, 32, 480, 127, 47)),
             Transform {
                 x: W / 2.0,
-                y: H / 2.0,
+                y: 15.0,
                 w: W as u16,
-                h: H as u16,
+                h: 47 as u16,
                 rot: 0.0,
             },
-        ));
-        let guy = engine.spawn(GuyBundle(
-            Sprite(spritesheet, SheetRegion::new(0, 16, 480, 8, 16, 16)),
-            Transform {
-                x: W / 2.0,
-                y: 24.0,
-                w: GUY_SIZE.x as u16,
-                h: GUY_SIZE.y as u16,
-                rot: 0.0,
-            },
-            Pushable::default(),
+            Solid::default(),
             BoxCollision(AABB {
                 center: Vec2::ZERO,
-                size: GUY_SIZE,
+                size: Vec2 {
+                    x: W / 1.0,
+                    y: 47.0,
+                },
             }),
-            Physics { vel: Vec2::ZERO },
-            Guy(),
         ));
+
+        // Spawns a little dood
+
+        // let guy = engine.spawn(GuyBundle(
+        //     Sprite(spritesheet, SheetRegion::new(0, 16, 480, 8, 16, 16)),
+        //     Transform {
+        //         x: W / 2.0,
+        //         y: 24.0,
+        //         w: GUY_SIZE.x as u16,
+        //         h: GUY_SIZE.y as u16,
+        //         rot: 0.0,
+        //     },
+        //     Pushable::default(),
+        //     BoxCollision(AABB {
+        //         center: Vec2::ZERO,
+        //         size: GUY_SIZE,
+        //     }),
+        //     Physics { vel: Vec2::ZERO },
+        //     Guy(),
+        // ));
+
         // floor
-        make_wall(spritesheet, engine, W / 2.0, 8.0, W, 16.0);
-        // left wall
-        make_wall(spritesheet, engine, 8.0, H / 2.0, 16.0, H);
-        // right wall
-        make_wall(spritesheet, engine, W - 8.0, H / 2.0, 16.0, H);
+        // make_wall(spritesheet, engine, W / 2.0, 8.0, W, 16.0);
+        // // left wall
+        // make_wall(spritesheet, engine, 8.0, H / 2.0, 16.0, H);
+        // // right wall
+        // make_wall(spritesheet, engine, W - 8.0, H / 2.0, 16.0, H);
         let font = engine.make_font(
             spritesheet,
             '0'..='9',
@@ -105,7 +132,7 @@ impl engine::Game for Game {
             score: 0,
             font,
             spritesheet,
-            guy,
+            // guy,
         }
     }
     fn update(&mut self, engine: &mut Engine) {
@@ -121,17 +148,21 @@ impl engine::Game for Game {
                 Self::DT
             );
         }
-        let dir = engine.input.key_axis(engine::Key::Left, engine::Key::Right);
-        engine
-            .world()
-            .query_one::<&mut Physics>(self.guy)
-            .unwrap()
-            .get()
-            .unwrap()
-            .vel = Vec2 {
-            x: dir * GUY_SPEED,
-            y: 0.0,
-        };
+
+        //This handles user input and moved the guy accordingly
+        // let dir = engine.input.key_axis(engine::Key::Left, engine::Key::Right);
+        // engine
+        //     .world()
+        //     .query_one::<&mut Physics>(self.guy)
+        //     .unwrap()
+        //     .get()
+        //     .unwrap()
+        //     .vel = Vec2 {
+        //     x: dir * GUY_SPEED,
+        //     y: 0.0,
+        // };
+
+        // This part of the code handeld spawning random apples
         let mut rng = rand::thread_rng();
         let mut apple_count = 0;
         let mut to_remove = vec![];
@@ -189,15 +220,17 @@ impl engine::Game for Game {
         }
     }
     fn render(&mut self, engine: &mut Engine) {
-        engine.draw_string(
-            &self.font,
-            self.score.to_string(),
-            Vec2 {
-                x: 16.0,
-                y: H - 16.0,
-            },
-            16.0,
-        );
+        // This function draws the counter that was original used
+
+        // engine.draw_string(
+        //     &self.font,
+        //     self.score.to_string(),
+        //     Vec2 {
+        //         x: 16.0,
+        //         y: H - 16.0,
+        //     },
+        //     16.0,
+        // );
     }
 }
 fn main() {
