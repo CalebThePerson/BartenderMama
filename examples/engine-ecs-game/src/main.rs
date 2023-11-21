@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use engine::Spritesheet;
 use engine_ecs as engine;
 use engine_ecs::wgpu;
@@ -9,6 +11,7 @@ type Engine = engine::Engine<Game>;
 // Stuff for testing not really important
 struct Apple();
 struct Guy();
+struct Bottle();
 
 // Bundles
 
@@ -65,6 +68,7 @@ struct Game {
     apple_timer: u32,
     score: u32,
     spritesheet: engine::Spritesheet,
+    held_bottle: Option<BottleBundle>,
 }
 
 impl engine::Game for Game {
@@ -107,6 +111,7 @@ impl engine::Game for Game {
             apple_timer: 0,
             score: 0,
             spritesheet,
+            held_bottle: None,
         }
     }
     fn update(&mut self, engine: &mut Engine) {
@@ -121,51 +126,83 @@ impl engine::Game for Game {
         //     .get()
         //     .unwrap()
         //     .vel = Vec2 {
-        //     x: dir * GUY_SPEED,
+        //     x: dir * 1.0,
         //     y: 0.0,
         // };
 
-        // This part of the code handeld spawning random apples
-        // let mut rng = rand::thread_rng();
-        // let mut apple_count = 0;
-        // let mut to_remove = vec![];
-        // for (apple, (_, trf)) in engine.world().query::<(&Apple, &Transform)>().iter() {
-        //     if trf.y < -8.0 {
-        //         to_remove.push(apple);
-        //     } else {
-        //         apple_count += 1;
-        //     }
-        // }
-        // for apple in to_remove {
-        //     engine.despawn(apple).unwrap();
-        // }
-        // if self.apple_timer > 0 {
-        //     self.apple_timer -= 1;
-        // } else if apple_count < APPLE_MAX {
-        //     let _apple = engine.spawn(AppleBundle(
-        //         Sprite(self.spritesheet, SheetRegion::new(0, 1, 3, 4, 16, 16)),
-        //         Transform {
-        //             x: rng.gen_range(8.0..(W - 8.0)),
-        //             y: H + 8.0,
-        //             w: APPLE_SIZE.x as u16,
-        //             h: APPLE_SIZE.y as u16,
-        //             rot: 0.0,
-        //         },
-        //         SolidPushable::default(),
-        //         BoxCollision(AABB {
-        //             center: Vec2::ZERO,
-        //             size: APPLE_SIZE,
-        //         }),
-        //         Physics {
-        //             vel: Vec2 {
-        //                 x: 0.0,
-        //                 y: rng.gen_range(APPLE_SPEED_RANGE),
-        //             },
-        //         },
-        //         Apple(),
-        //     ));
-        //     self.apple_timer = rng.gen_range(APPLE_INTERVAL);
-        // }
+
+        if engine.input.is_mouse_pressed(winit::event::MouseButton::Left) {
+            let mouse_position = engine.input.mouse_pos();
+    
+            // // Check if there is a bottle at the mouse position
+            // for (bottle, (_, transform)) in engine.world().query::<(&Bottle, &Transform)>().iter() {
+            //     // if transform.contains_point(Vec2::new(mouse_position.x, mouse_position.y)) {
+            //     if transform.y == mouse_position.y as f32 {
+            //         if let Some(held_bottle) = self.held_bottle {
+            //             // Drop the held bottle
+            //             self.held_bottle = None;
+            //             // Add code to drop the bottle at the mouse position
+            //             // ...
+                        // let _bottle = engine.spawn(AppleBundle(
+                        //     Sprite(self.spritesheet, SheetRegion::new(0, 1, 3, 4, 16, 16)),
+                        //     Transform {
+                        //         x: mouse_position.x as f32,
+                        //         y: mouse_position.y as f32,
+                        //         w: APPLE_SIZE.x as u16,
+                        //         h: APPLE_SIZE.y as u16,
+                        //         rot: 0.0,
+                        //     },
+                        //     SolidPushable::default(),
+                        //     BoxCollision(AABB {
+                        //         center: Vec2::ZERO,
+                        //         size: APPLE_SIZE,
+                        //     }),
+                        //     Physics {
+                        //         vel: Vec2 {
+                        //             x: 0.0,
+                        //             y: -0.5,
+                        //         },
+                        //     },
+                        //     Apple(),
+                        // ));
+            //         } else {
+            //             // Pick up the clicked bottle
+            //             self.held_bottle = Some(bottle);
+            //             // Add code to update the state of the picked up bottle
+            //             // ...
+            //         }
+            //         // Break the loop after handling the first bottle found at the mouse position
+            //         break;
+            //     }
+            // }
+
+            println!("{}:{}", mouse_position.x, mouse_position.y);
+
+            let _bottle = engine.spawn(AppleBundle(
+                Sprite(self.spritesheet, SheetRegion::new(0, 1, 3, 4, 16, 16)),
+                Transform {
+                    x: mouse_position.x as f32/2.5,
+                    y: H - mouse_position.y as f32/2.5,
+                    w: APPLE_SIZE.x as u16,
+                    h: APPLE_SIZE.y as u16,
+                    rot: 0.0,
+                },
+                SolidPushable::default(),
+                BoxCollision(AABB {
+                    center: Vec2::ZERO,
+                    size: APPLE_SIZE,
+                }),
+                Physics {
+                    vel: Vec2 {
+                        x: 0.0,
+                        y: -2.5,
+                    },
+                },
+                Apple(),
+            ));
+            
+        }
+
     }
     fn handle_collisions(
         &mut self,
