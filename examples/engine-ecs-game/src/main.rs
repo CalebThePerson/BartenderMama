@@ -46,7 +46,7 @@ const H: f32 = 240.0;
 /////
 
 //Testing Variables for Physics
-const APPLE_SIZE: Vec2 = Vec2 { x: 16.0, y: 16.0 };
+const APPLE_SIZE: Vec2 = Vec2 { x: 10.0, y: 20.0 };
 const SPRITE_MAX: usize = 16;
 const APPLE_MAX: usize = 128;
 const APPLE_INTERVAL: std::ops::Range<u32> = 1..10;
@@ -179,7 +179,7 @@ impl engine::Game for Game {
             println!("{}:{}", mouse_position.x, mouse_position.y);
 
             let _bottle = engine.spawn(AppleBundle(
-                Sprite(self.spritesheet, SheetRegion::new(0, 1, 3, 4, 16, 16)),
+                Sprite(self.spritesheet, SheetRegion::new(0, 1, 1, 480, 3, 11)),
                 Transform {
                     x: mouse_position.x as f32/2.5,
                     y: H - mouse_position.y as f32/2.5,
