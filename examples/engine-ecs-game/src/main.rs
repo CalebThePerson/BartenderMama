@@ -4,6 +4,7 @@ use hecs::Entity;
 use rand::Rng;
 type Engine = engine::Engine<Game>;
 
+
 // Components (markers)
 struct Apple();
 struct Guy();
@@ -22,6 +23,17 @@ struct AppleBundle(
     Physics,
     Apple,
 );
+
+struct BottleBundle(
+    Sprite,
+    Transform,
+    SolidPushable,
+    BoxCollision,
+    Physics,
+    ingredients
+    ,
+);
+
 #[derive(hecs::Bundle)]
 struct DecoBundle(Sprite, Transform);
 
@@ -36,8 +48,8 @@ const WALL_UVS: SheetRegion = SheetRegion::new(0, 0, 480, 12, 8, 8);
 const APPLE_SPEED_RANGE: std::ops::Range<f32> = (-2.0)..(-0.5);
 
 struct Game {
-    apple_timer: u32,
-    score: u32,
+    // apple_timer: u32,
+    // score: u32,
     guy: Entity,
     spritesheet: engine::Spritesheet,
     font: engine::BitFont,

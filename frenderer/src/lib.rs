@@ -23,6 +23,8 @@
 //! also be provided.
 
 pub mod input;
+mod ingredients;
+pub mod gamestate;
 
 /// Whether storage buffers should be used (currently only WebGL uses instance buffers instead)
 #[cfg(not(feature = "webgl"))]
