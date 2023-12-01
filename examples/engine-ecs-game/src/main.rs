@@ -37,7 +37,7 @@ struct DecoBundle(Sprite, Transform);
 
 //Bottle Bundle, feel free to add on as you see fit
 #[derive(hecs::Bundle)]
-struct BottleBundle(Sprite, Transform, Solid, BoxCollision);
+struct BottleBundle(Sprite, Transform, Solid, BoxCollision, bool);
 ////
 
 ///Width and height of the window
@@ -130,10 +130,12 @@ impl engine::Game for Game {
         //     y: 0.0,
         // };
 
-
-        if engine.input.is_mouse_pressed(winit::event::MouseButton::Left) {
+        if engine
+            .input
+            .is_mouse_pressed(winit::event::MouseButton::Left)
+        {
             let mouse_position = engine.input.mouse_pos();
-    
+
             // // Check if there is a bottle at the mouse position
             // for (bottle, (_, transform)) in engine.world().query::<(&Bottle, &Transform)>().iter() {
             //     // if transform.contains_point(Vec2::new(mouse_position.x, mouse_position.y)) {
@@ -143,28 +145,28 @@ impl engine::Game for Game {
             //             self.held_bottle = None;
             //             // Add code to drop the bottle at the mouse position
             //             // ...
-                        // let _bottle = engine.spawn(AppleBundle(
-                        //     Sprite(self.spritesheet, SheetRegion::new(0, 1, 3, 4, 16, 16)),
-                        //     Transform {
-                        //         x: mouse_position.x as f32,
-                        //         y: mouse_position.y as f32,
-                        //         w: APPLE_SIZE.x as u16,
-                        //         h: APPLE_SIZE.y as u16,
-                        //         rot: 0.0,
-                        //     },
-                        //     SolidPushable::default(),
-                        //     BoxCollision(AABB {
-                        //         center: Vec2::ZERO,
-                        //         size: APPLE_SIZE,
-                        //     }),
-                        //     Physics {
-                        //         vel: Vec2 {
-                        //             x: 0.0,
-                        //             y: -0.5,
-                        //         },
-                        //     },
-                        //     Apple(),
-                        // ));
+            // let _bottle = engine.spawn(AppleBundle(
+            //     Sprite(self.spritesheet, SheetRegion::new(0, 1, 3, 4, 16, 16)),
+            //     Transform {
+            //         x: mouse_position.x as f32,
+            //         y: mouse_position.y as f32,
+            //         w: APPLE_SIZE.x as u16,
+            //         h: APPLE_SIZE.y as u16,
+            //         rot: 0.0,
+            //     },
+            //     SolidPushable::default(),
+            //     BoxCollision(AABB {
+            //         center: Vec2::ZERO,
+            //         size: APPLE_SIZE,
+            //     }),
+            //     Physics {
+            //         vel: Vec2 {
+            //             x: 0.0,
+            //             y: -0.5,
+            //         },
+            //     },
+            //     Apple(),
+            // ));
             //         } else {
             //             // Pick up the clicked bottle
             //             self.held_bottle = Some(bottle);
@@ -176,33 +178,42 @@ impl engine::Game for Game {
             //     }
             // }
 
-            println!("{}:{}", mouse_position.x, mouse_position.y);
+            //Make this an engine function later
+            for (bottle, (sprite, trans, solid, collision, isBottle)) in engine
+                .world()
+                .query::<(&Sprite, &Transform, &Solid, &BoxCollision, &bool)>()
+                .iter()
+            {
+                // println!("{}, {}", trans.x, trans.y)
+                // println!("{}:{}", mouse_position.x, mouse_position.y);
+                let newMouseX = (mouse_position.x as f64 / 1581.0) * W as f64;
+                let newMouseY = ((mouse_position.y as f64 / 1185.0) * H as f64) - 53.0;
+                // println!("{}, {}", newMouseX, newMouseY);
 
-            let _bottle = engine.spawn(AppleBundle(
-                Sprite(self.spritesheet, SheetRegion::new(0, 1, 1, 480, 3, 11)),
-                Transform {
-                    x: mouse_position.x as f32/2.5,
-                    y: H - mouse_position.y as f32/2.5,
-                    w: APPLE_SIZE.x as u16,
-                    h: APPLE_SIZE.y as u16,
-                    rot: 0.0,
-                },
-                SolidPushable::default(),
-                BoxCollision(AABB {
-                    center: Vec2::ZERO,
-                    size: APPLE_SIZE,
-                }),
-                Physics {
-                    vel: Vec2 {
-                        x: 0.0,
-                        y: -2.5,
-                    },
-                },
-                Apple(),
-            ));
-            
+                if trans.detectMouseCollision(newMouseX, newMouseY) {
+                    println!("mouse Detected");
+                }
+            }
+            // let _bottle = engine.spawn(AppleBundle(
+            //     Sprite(self.spritesheet, SheetRegion::new(0, 1, 1, 480, 3, 11)),
+            //     Transform {
+            //         x: mouse_position.x as f32 / 2.5,
+            //         y: H - mouse_position.y as f32 / 2.5,
+            //         w: APPLE_SIZE.x as u16,
+            //         h: APPLE_SIZE.y as u16,
+            //         rot: 0.0,
+            //     },
+            //     SolidPushable::default(),
+            //     BoxCollision(AABB {
+            //         center: Vec2::ZERO,
+            //         size: APPLE_SIZE,
+            //     }),
+            //     Physics {
+            //         vel: Vec2 { x: 0.0, y: -2.5 },
+            //     },
+            //     Apple(),
+            // ));
         }
-
     }
     fn handle_collisions(
         &mut self,
@@ -298,6 +309,7 @@ fn make_bottle(
             center: Vec2::ZERO,
             size: Vec2 { x: w, y: h },
         }),
+        true,
     );
     bottleBundles.push(&theBundle);
     engine.spawn(theBundle);
