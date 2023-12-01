@@ -80,6 +80,18 @@ impl Transform {
     pub fn translation(&self) -> [f32; 2] {
         [self.x, self.y]
     }
+
+    pub fn detectMouseCollision(&self, mouseX: f64, mouseY: f64) -> bool {
+        let left_boundary = self.x - (self.w as f32) / 2.0;
+        let right_boundary = self.x + (self.w as f32) / 2.0;
+        let top_boundary = self.y - (self.h as f32) / 2.0;
+        let bottom_boundary = self.y + (self.h as f32) / 2.0;
+
+        mouseX as f32 >= left_boundary
+            && mouseX <= (right_boundary as f64)
+            && mouseY >= (top_boundary as f64)
+            && mouseY <= (bottom_boundary as f64)
+    }
 }
 
 /// Camera2D is a transform for a sprite layer, defining a scale
