@@ -130,6 +130,7 @@ impl engine::Game for Game {
         //     x: dir * 1.0,
         //     y: 0.0,
         // };
+        
 
         if engine
             .input

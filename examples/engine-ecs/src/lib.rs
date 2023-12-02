@@ -328,17 +328,19 @@ impl<G: Game> Engine<G> {
 
     //IDK WHAT TO CALL THIS IM IN PAIN
     pub fn bottleDection(&mut self, mut mouseX: f64, mut mouseY: f64) {
+        mouseX = (mouseX as f64 / 1581.0) * 320.0 as f64;
+        mouseY = ((mouseY as f64 / 1185.0) * 240.0 as f64) - 53.0;
+        println!("{} {}", mouseX, mouseY);
+
         for (bottle, (sprite, trans, solid, collision, isBottle)) in self
             .world()
             .query::<(&Sprite, &mut Transform, &Solid, &BoxCollision, &bool)>()
             .iter()
         {
-            mouseX = (mouseX as f64 / 1581.0) * 320.0 as f64;
-            mouseY = ((mouseY as f64 / 1185.0) * 240.0 as f64) - 53.0;
-
             if trans.detectMouseCollision(mouseX, mouseY) {
                 println!("Detected");
                 trans.moveSprite(mouseX, mouseY);
+
                 if self.input.is_mouse_pressed(winit::event::MouseButton::Left) {
                     //let go
                 }
