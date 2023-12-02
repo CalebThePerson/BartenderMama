@@ -114,6 +114,7 @@ impl engine::Game for Game {
             held_bottle: None,
         }
     }
+
     fn update(&mut self, engine: &mut Engine) {
         if engine.frame_number() % 600 == 0 {}
 
@@ -136,62 +137,48 @@ impl engine::Game for Game {
         {
             let mouse_position = engine.input.mouse_pos();
 
-            // // Check if there is a bottle at the mouse position
-            // for (bottle, (_, transform)) in engine.world().query::<(&Bottle, &Transform)>().iter() {
-            //     // if transform.contains_point(Vec2::new(mouse_position.x, mouse_position.y)) {
-            //     if transform.y == mouse_position.y as f32 {
-            //         if let Some(held_bottle) = self.held_bottle {
-            //             // Drop the held bottle
-            //             self.held_bottle = None;
-            //             // Add code to drop the bottle at the mouse position
-            //             // ...
-            // let _bottle = engine.spawn(AppleBundle(
-            //     Sprite(self.spritesheet, SheetRegion::new(0, 1, 3, 4, 16, 16)),
-            //     Transform {
-            //         x: mouse_position.x as f32,
-            //         y: mouse_position.y as f32,
-            //         w: APPLE_SIZE.x as u16,
-            //         h: APPLE_SIZE.y as u16,
-            //         rot: 0.0,
-            //     },
-            //     SolidPushable::default(),
-            //     BoxCollision(AABB {
-            //         center: Vec2::ZERO,
-            //         size: APPLE_SIZE,
-            //     }),
-            //     Physics {
-            //         vel: Vec2 {
-            //             x: 0.0,
-            //             y: -0.5,
-            //         },
-            //     },
-            //     Apple(),
-            // ));
-            //         } else {
-            //             // Pick up the clicked bottle
-            //             self.held_bottle = Some(bottle);
-            //             // Add code to update the state of the picked up bottle
-            //             // ...
+            //Make this an engine function later
+
+            // let mut bottle_copy = engine.grab_bottle;
+            let mut mouseX = mouse_position.x;
+            let mut mouseY = mouse_position.y;
+            // for (bottle, (sprite, trans, solid, collision, isBottle)) in engine
+            //     .world()
+            //     .query::<(&Sprite, &Transform, &Solid, &BoxCollision, &bool)>()
+            //     .iter()
+            // {
+            //     // println!("{}, {}", trans.x, trans.y)
+            //     // println!("{}:{}", mouse_position.x, mouse_position.y);
+            //     mouseX = (mouseX as f64 / 1581.0) * W as f64;
+            //     mouseY = ((mouseY as f64 / 1185.0) * H as f64) - 53.0;
+            //     // println!("{}, {}", newMouseX, newMouseY);
+
+            //     if trans.detectMouseCollision(mouseX, mouseY) {
+            //         println!("mouse Detected");
+            //         bottle_copy = true;
+            //         // if let Some(index) = find_by_coordinates(&bottleBundles, trans.x, trans.y) {
+            //         //     if let Some(foundBottle) = bottleBundles.get(index) {
+            //         //         self.held_bottle = Option::<foundBottle>;
+            //         //     }
+            //         // }
+
+            //         if let Some(index) = find_index_by_coordinates(&bottleBundles, trans.x, trans.y)
+            //         {
+            //             self.held_bottle = Some(bottleBundles[index]);
             //         }
-            //         // Break the loop after handling the first bottle found at the mouse position
-            //         break;
             //     }
             // }
+            engine.bottleDection(mouseX, mouseY);
 
-            //Make this an engine function later
-            for (bottle, (sprite, trans, solid, collision, isBottle)) in engine
-                .world()
-                .query::<(&Sprite, &Transform, &Solid, &BoxCollision, &bool)>()
-                .iter()
-            {
-                // println!("{}, {}", trans.x, trans.y)
-                // println!("{}:{}", mouse_position.x, mouse_position.y);
-                let newMouseX = (mouse_position.x as f64 / 1581.0) * W as f64;
-                let newMouseY = ((mouse_position.y as f64 / 1185.0) * H as f64) - 53.0;
-                // println!("{}, {}", newMouseX, newMouseY);
+            while engine.grab_bottle {
+                // let mut theBottle = self.held_bottle.unwrap();
+                // theBottle.1.moveSprite(mouseX, mouseY);
 
-                if trans.detectMouseCollision(newMouseX, newMouseY) {
-                    println!("mouse Detected");
+                if engine
+                    .input
+                    .is_mouse_pressed(winit::event::MouseButton::Left)
+                {
+                    engine.grab_bottle = false;
                 }
             }
             // let _bottle = engine.spawn(AppleBundle(
@@ -313,4 +300,14 @@ fn make_bottle(
     );
     bottleBundles.push(&theBundle);
     engine.spawn(theBundle);
+}
+
+fn find_index_by_coordinates(
+    vector: &Vec<&BottleBundle>,
+    target_x: f32,
+    target_y: f32,
+) -> Option<usize> {
+    vector
+        .iter()
+        .position(|bundle| bundle.1.x == target_x && bundle.1.y == target_y)
 }

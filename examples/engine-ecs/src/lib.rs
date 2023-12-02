@@ -1,7 +1,9 @@
 pub use bytemuck::Zeroable;
+use collision::{BoxCollision, Solid};
+use components::Sprite;
 pub use frenderer::{
     input::{Input, Key},
-    wgpu, Camera2D as Camera, Frenderer, SheetRegion, Transform,
+    wgpu, Camera2D as Camera, Frenderer, SheetRegion, SpriteRenderer, Transform,
 };
 pub use hecs;
 mod gfx;
@@ -41,6 +43,7 @@ pub struct Engine<G: Game> {
     net_times: std::collections::VecDeque<f32>,
     sim_frame: usize,
     _game: std::marker::PhantomData<G>,
+    pub grab_bottle: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -76,6 +79,7 @@ impl<G: Game> Engine<G> {
             texts: Vec::with_capacity(128),
             sim_frame: 0,
             _game: std::marker::PhantomData,
+            grab_bottle: false,
         }
     }
     pub fn world(&self) -> &hecs::World {
@@ -321,4 +325,28 @@ impl<G: Game> Engine<G> {
         self.texts
             .push(TextDraw(font.font.clone(), text, pos, char_sz));
     }
+
+    //IDK WHAT TO CALL THIS IM IN PAIN
+    pub fn bottleDection(&mut self, mut mouseX: f64, mut mouseY: f64) {
+        for (bottle, (sprite, trans, solid, collision, isBottle)) in self
+            .world()
+            .query::<(&Sprite, &mut Transform, &Solid, &BoxCollision, &bool)>()
+            .iter()
+        {
+            mouseX = (mouseX as f64 / 1581.0) * 320.0 as f64;
+            mouseY = ((mouseY as f64 / 1185.0) * 240.0 as f64) - 53.0;
+
+            if trans.detectMouseCollision(mouseX, mouseY) {
+                println!("Detected");
+                trans.moveSprite(mouseX, mouseY);
+                if self.input.is_mouse_pressed(winit::event::MouseButton::Left) {
+                    //let go
+                }
+            }
+        }
+    }
 }
+
+// fn yup(trans: mut &Trans ,mouseX : f32, mouseY : f32) {
+
+// }

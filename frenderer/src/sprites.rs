@@ -92,6 +92,11 @@ impl Transform {
             && mouseY >= (top_boundary as f64)
             && mouseY <= (bottom_boundary as f64)
     }
+
+    pub fn moveSprite(&mut self, mouseX: f64, mouseY: f64) {
+        self.x = mouseX as f32;
+        self.y = mouseY as f32;
+    }
 }
 
 /// Camera2D is a transform for a sprite layer, defining a scale
