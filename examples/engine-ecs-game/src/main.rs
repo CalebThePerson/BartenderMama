@@ -71,7 +71,7 @@ struct Game {
     score: u32,
     spritesheet: engine::Spritesheet,
     held_bottle: Option<Entity>,
-
+    reset: bool,
 }
 
 impl engine::Game for Game {
@@ -115,20 +115,25 @@ impl engine::Game for Game {
             score: 0,
             spritesheet,
             held_bottle: None,
+            reset: false,
         }
     }
 
     fn update(&mut self, engine: &mut Engine) {
         if engine.frame_number() % 600 == 0 {}
 
+        if self.reset {
+            engine.resetBottles(); // hopefully this workd
+        }
+
         if self.held_bottle.is_some() {
             println!("moving");
             for (bottle, (sprite, trans, solid, collision, isBottle)) in engine
-            .world()
-            .query::<(&Sprite, &mut Transform, &Solid, &BoxCollision, &bool)>()
-            .iter()
+                .world()
+                .query::<(&Sprite, &mut Transform, &Solid, &BoxCollision, &bool)>()
+                .iter()
             {
-                // 
+                //
                 if !self.held_bottle.is_none() {
                     if bottle == self.held_bottle.unwrap() {
                         println!("same bottle");
@@ -138,60 +143,37 @@ impl engine::Game for Game {
                             trans.rotcounter_Sprite();
                         }
                         let (mouseX, mouseY) = engine.mouse_localized(H);
+                        println!("{}, {}", mouseX, mouseY);
                         trans.moveSprite(mouseX, mouseY);
                         if engine
-                        .input
-                        .is_mouse_pressed(winit::event::MouseButton::Left)
+                            .input
+                            .is_mouse_pressed(winit::event::MouseButton::Left)
                         {
                             self.held_bottle = None;
+                            self.reset = true;
                         }
                     }
                 }
-                
             }
-        }
-
-        else if engine
+        } else if engine
             .input
             .is_mouse_pressed(winit::event::MouseButton::Left)
         {
             // let mouse_position = engine.input.mouse_pos();
 
             let (mut mouseX, mut mouseY) = engine.mouse_localized(H);
-            
 
             for (bottle, (sprite, trans, solid, collision, isBottle)) in engine
-            .world()
-            .query::<(&Sprite, &mut Transform, &Solid, &BoxCollision, &bool)>()
-            .iter()
-        {
-            if trans.detectMouseCollision(mouseX, mouseY) {
-                println!("Detected");
+                .world()
+                .query::<(&Sprite, &mut Transform, &Solid, &BoxCollision, &bool)>()
+                .iter()
+            {
+                if trans.detectMouseCollision(mouseX, mouseY) {
+                    println!("Detected");
 
-                self.held_bottle = Some(bottle);
+                    self.held_bottle = Some(bottle);
+                }
             }
-        }
-
-           
-            // let _bottle = engine.spawn(AppleBundle(
-            //     Sprite(self.spritesheet, SheetRegion::new(0, 1, 1, 480, 3, 11)),
-            //     Transform {
-            //         x: mouseX as f32,
-            //         y: mouseY as f32,
-            //         w: APPLE_SIZE.x as u16,
-            //         h: APPLE_SIZE.y as u16,
-            //         rot: 0.0,
-            //     },
-            //     SolidPushable::default(),
-            //     BoxCollision(AABB {
-            //         center: Vec2::ZERO,
-            //         size: APPLE_SIZE,
-            //     }),
-            //     Physics {
-            //         vel: Vec2 { x: 0.0, y: -2.5 },
-            //     },
-            //     Apple(),
-            // ));
         }
     }
     fn handle_collisions(

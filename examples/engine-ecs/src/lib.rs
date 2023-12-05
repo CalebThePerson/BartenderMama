@@ -306,7 +306,6 @@ impl<G: Game> Engine<G> {
     pub fn ret_scale(&self) -> f64 {
         println!("{}", self.window.scale_factor());
         return self.window.scale_factor();
-
     }
 
     pub fn add_spritesheet(
@@ -350,22 +349,32 @@ impl<G: Game> Engine<G> {
                 println!("Detected");
                 trans.moveSprite(mouseX, mouseY);
 
-            
-
                 // if self.input.is_mouse_pressed(winit::event::MouseButton::Left) {
                 //     //let go
                 // }
             }
         }
-
     }
 
     pub fn mouse_localized(&self, h: f32) -> (f64, f64) {
         let mouse_position = self.input.mouse_pos();
-        let mut mouseX = mouse_position.x/(self.ret_scale() + 1 as f64);
-        let mut mouseY = h as f64 - mouse_position.y/(self.ret_scale() + 1 as f64);
+        let mut mouseX = mouse_position.x / (self.ret_scale() + 1 as f64);
+        let mut mouseY = h as f64 - mouse_position.y / (self.ret_scale() + 1 as f64);
 
         return (mouseX, mouseY);
+    }
+
+    pub fn resetBottles(&mut self) {
+        let mut counter = 0.0;
+        for (bottle, (sprite, trans, solid, collision, isBottle)) in self
+            .world()
+            .query::<(&Sprite, &mut Transform, &Solid, &BoxCollision, &bool)>()
+            .iter()
+        {
+            trans.x = (counter * 20.0) + 106.0;
+            trans.y = 90.0;
+            counter += 1.0;
+        }
     }
 }
 
