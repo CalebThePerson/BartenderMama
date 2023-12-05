@@ -121,18 +121,6 @@ impl engine::Game for Game {
     fn update(&mut self, engine: &mut Engine) {
         if engine.frame_number() % 600 == 0 {}
 
-        //This handles user input and moved the guy accordingly
-        // let dir = engine.input.key_axis(engine::Key::Left, engine::Key::Right);
-        // engine
-        //     .world()
-        //     .query_one::<&mut Physics>(self.guy)
-        //     .unwrap()
-        //     .get()
-        //     .unwrap()
-        //     .vel = Vec2 {
-        //     x: dir * 1.0,
-        //     y: 0.0,
-        // };
         if self.held_bottle.is_some() {
             println!("moving");
             for (bottle, (sprite, trans, solid, collision, isBottle)) in engine
@@ -144,7 +132,11 @@ impl engine::Game for Game {
                 if !self.held_bottle.is_none() {
                     if bottle == self.held_bottle.unwrap() {
                         println!("same bottle");
-                        trans.rotc_Sprite();
+                        if engine.input.is_key_down(engine::Key::Space) {
+                            trans.rotc_Sprite();
+                        } else {
+                            trans.rotcounter_Sprite();
+                        }
                         let (mouseX, mouseY) = engine.mouse_localized(H);
                         trans.moveSprite(mouseX, mouseY);
                         if engine
@@ -152,7 +144,6 @@ impl engine::Game for Game {
                         .is_mouse_pressed(winit::event::MouseButton::Left)
                         {
                             self.held_bottle = None;
-                            trans.rotcounter_Sprite();
                         }
                     }
                 }
