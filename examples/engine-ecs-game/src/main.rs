@@ -40,7 +40,10 @@ struct DecoBundle(Sprite, Transform);
 //Bottle Bundle, feel free to add on as you see fit
 #[derive(hecs::Bundle)]
 struct BottleBundle(Sprite, Transform, Solid, BoxCollision, bool);
-////
+
+#[derive(hecs::Bundle)]
+struct GlassBundle(Sprite, Transform, bool); //Getting rid of Solid, BoxCollision because we need to be able to queruy for it plus it shouldnt need those two things
+                                             ////
 
 ///Width and height of the window
 const W: f32 = 320.0;
@@ -56,14 +59,16 @@ const APPLE_SPEED_RANGE: std::ops::Range<f32> = (-2.0)..(-0.5);
 ////
 
 //Static UVS
-const WALL_UVS: SheetRegion = SheetRegion::new(0, 0, 480, 12, 8, 8);
 const SHELF_UVS: SheetRegion = SheetRegion::new(0, 1, 50, 480, 264, 16);
-const BAR_UVS: SheetRegion = SheetRegion::new(0, 36, 1, 480, 127, 47);
+const BAR_UVS: SheetRegion = SheetRegion::new(0, 45, 1, 480, 127, 47);
 const BOTTLE_UVS: SheetRegion = SheetRegion::new(0, 1, 1, 480, 3, 11);
+const GLASS_UVS: SheetRegion = SheetRegion::new(0, 36, 1, 480, 7, 7);
+
 //////
 
 ///Bundle Vectors
-const bottleBundles: Vec<&BottleBundle> = Vec::new();
+const bottleBundles: Vec<&BottleBundle> = Vec::new(); //Delete later dont really need
+const glassVec: Vec<&GlassBundle> = Vec::new();
 /// //
 
 struct Game {
@@ -97,6 +102,7 @@ impl engine::Game for Game {
         make_bar(spritesheet, engine, W / 2.0, 15.0, W, 47.0);
         make_shelf(spritesheet, engine, W / 2.0, 60.0 + 20.0, 160.0, 16.0);
         make_shelf(spritesheet, engine, W / 2.0, 100.0 + 20.0, 160.0, 16.0);
+        make_glass(spritesheet, engine, W / 2.0, 45.0, 14.0, 14.0);
 
         for i in 0..5 {
             //Making bottles on bottom shelf
@@ -123,7 +129,7 @@ impl engine::Game for Game {
         if engine.frame_number() % 600 == 0 {}
 
         if self.reset {
-            engine.resetBottles(); // hopefully this workd
+            engine.resetBottles(); // Resets all the bottles positions and activiates on the second mouse click
         }
 
         if self.held_bottle.is_some() {
@@ -272,7 +278,30 @@ fn make_bottle(
         }),
         true,
     );
-    bottleBundles.push(&theBundle);
+
+    engine.spawn(theBundle);
+}
+
+fn make_glass(
+    spritesheet: engine_ecs::Spritesheet,
+    engine: &mut Engine,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+) {
+    let theBundle = GlassBundle(
+        Sprite(spritesheet, GLASS_UVS),
+        Transform {
+            x,
+            y,
+            w: w as u16,
+            h: h as u16,
+            rot: 0.0,
+        },
+        true,
+    );
+    glassVec.push(&theBundle);
     engine.spawn(theBundle);
 }
 
