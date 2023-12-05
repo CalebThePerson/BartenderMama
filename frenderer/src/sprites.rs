@@ -97,6 +97,14 @@ impl Transform {
         self.x = mouseX as f32;
         self.y = mouseY as f32;
     }
+
+    pub fn rotc_Sprite(&mut self) {
+        self.rot = 5.0 as f32;
+    }
+
+    pub fn rotcounter_Sprite(&mut self) {
+        self.rot = 0 as f32;
+    }
 }
 
 /// Camera2D is a transform for a sprite layer, defining a scale

@@ -6,6 +6,8 @@ use engine_ecs::wgpu;
 use engine_ecs::{components::*, geom::*, Camera, SheetRegion};
 use hecs::Entity;
 use rand::Rng;
+use winit::dpi::LogicalPosition;
+use winit::window::{self, Window};
 type Engine = engine::Engine<Game>;
 
 // Stuff for testing not really important
@@ -68,7 +70,8 @@ struct Game {
     apple_timer: u32,
     score: u32,
     spritesheet: engine::Spritesheet,
-    held_bottle: Option<BottleBundle>,
+    held_bottle: Option<Entity>,
+
 }
 
 impl engine::Game for Game {
@@ -118,75 +121,63 @@ impl engine::Game for Game {
     fn update(&mut self, engine: &mut Engine) {
         if engine.frame_number() % 600 == 0 {}
 
-        //This handles user input and moved the guy accordingly
-        // let dir = engine.input.key_axis(engine::Key::Left, engine::Key::Right);
-        // engine
-        //     .world()
-        //     .query_one::<&mut Physics>(self.guy)
-        //     .unwrap()
-        //     .get()
-        //     .unwrap()
-        //     .vel = Vec2 {
-        //     x: dir * 1.0,
-        //     y: 0.0,
-        // };
-        
+        if self.held_bottle.is_some() {
+            println!("moving");
+            for (bottle, (sprite, trans, solid, collision, isBottle)) in engine
+            .world()
+            .query::<(&Sprite, &mut Transform, &Solid, &BoxCollision, &bool)>()
+            .iter()
+            {
+                // 
+                if !self.held_bottle.is_none() {
+                    if bottle == self.held_bottle.unwrap() {
+                        println!("same bottle");
+                        if engine.input.is_key_down(engine::Key::Space) {
+                            trans.rotc_Sprite();
+                        } else {
+                            trans.rotcounter_Sprite();
+                        }
+                        let (mouseX, mouseY) = engine.mouse_localized(H);
+                        trans.moveSprite(mouseX, mouseY);
+                        if engine
+                        .input
+                        .is_mouse_pressed(winit::event::MouseButton::Left)
+                        {
+                            self.held_bottle = None;
+                        }
+                    }
+                }
+                
+            }
+        }
 
-        if engine
+        else if engine
             .input
             .is_mouse_pressed(winit::event::MouseButton::Left)
         {
-            let mouse_position = engine.input.mouse_pos();
+            // let mouse_position = engine.input.mouse_pos();
 
-            //Make this an engine function later
+            let (mut mouseX, mut mouseY) = engine.mouse_localized(H);
+            
 
-            // let mut bottle_copy = engine.grab_bottle;
-            let mut mouseX = mouse_position.x;
-            let mut mouseY = mouse_position.y;
-            // for (bottle, (sprite, trans, solid, collision, isBottle)) in engine
-            //     .world()
-            //     .query::<(&Sprite, &Transform, &Solid, &BoxCollision, &bool)>()
-            //     .iter()
-            // {
-            //     // println!("{}, {}", trans.x, trans.y)
-            //     // println!("{}:{}", mouse_position.x, mouse_position.y);
-            //     mouseX = (mouseX as f64 / 1581.0) * W as f64;
-            //     mouseY = ((mouseY as f64 / 1185.0) * H as f64) - 53.0;
-            //     // println!("{}, {}", newMouseX, newMouseY);
+            for (bottle, (sprite, trans, solid, collision, isBottle)) in engine
+            .world()
+            .query::<(&Sprite, &mut Transform, &Solid, &BoxCollision, &bool)>()
+            .iter()
+        {
+            if trans.detectMouseCollision(mouseX, mouseY) {
+                println!("Detected");
 
-            //     if trans.detectMouseCollision(mouseX, mouseY) {
-            //         println!("mouse Detected");
-            //         bottle_copy = true;
-            //         // if let Some(index) = find_by_coordinates(&bottleBundles, trans.x, trans.y) {
-            //         //     if let Some(foundBottle) = bottleBundles.get(index) {
-            //         //         self.held_bottle = Option::<foundBottle>;
-            //         //     }
-            //         // }
-
-            //         if let Some(index) = find_index_by_coordinates(&bottleBundles, trans.x, trans.y)
-            //         {
-            //             self.held_bottle = Some(bottleBundles[index]);
-            //         }
-            //     }
-            // }
-            engine.bottleDection(mouseX, mouseY);
-
-            while engine.grab_bottle {
-                // let mut theBottle = self.held_bottle.unwrap();
-                // theBottle.1.moveSprite(mouseX, mouseY);
-
-                if engine
-                    .input
-                    .is_mouse_pressed(winit::event::MouseButton::Left)
-                {
-                    engine.grab_bottle = false;
-                }
+                self.held_bottle = Some(bottle);
             }
+        }
+
+           
             // let _bottle = engine.spawn(AppleBundle(
             //     Sprite(self.spritesheet, SheetRegion::new(0, 1, 1, 480, 3, 11)),
             //     Transform {
-            //         x: mouse_position.x as f32 / 2.5,
-            //         y: H - mouse_position.y as f32 / 2.5,
+            //         x: mouseX as f32,
+            //         y: mouseY as f32,
             //         w: APPLE_SIZE.x as u16,
             //         h: APPLE_SIZE.y as u16,
             //         rot: 0.0,

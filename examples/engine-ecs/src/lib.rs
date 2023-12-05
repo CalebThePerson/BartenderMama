@@ -1,3 +1,5 @@
+use std::ops::DerefMut;
+
 pub use bytemuck::Zeroable;
 use collision::{BoxCollision, Solid};
 use components::Sprite;
@@ -300,6 +302,13 @@ impl<G: Game> Engine<G> {
     pub fn frame_number(&self) -> usize {
         self.sim_frame
     }
+
+    pub fn ret_scale(&self) -> f64 {
+        println!("{}", self.window.scale_factor());
+        return self.window.scale_factor();
+
+    }
+
     pub fn add_spritesheet(
         &mut self,
         imgs: &[&image::RgbaImage],
@@ -328,8 +337,8 @@ impl<G: Game> Engine<G> {
 
     //IDK WHAT TO CALL THIS IM IN PAIN
     pub fn bottleDection(&mut self, mut mouseX: f64, mut mouseY: f64) {
-        mouseX = (mouseX as f64 / 1581.0) * 320.0 as f64;
-        mouseY = ((mouseY as f64 / 1185.0) * 240.0 as f64) - 53.0;
+        // mouseX = (mouseX as f64 / 1581.0) * 320.0 as f64;
+        // mouseY = ((mouseY as f64 / 1185.0) * 240.0 as f64) - 53.0;
         println!("{} {}", mouseX, mouseY);
 
         for (bottle, (sprite, trans, solid, collision, isBottle)) in self
@@ -341,11 +350,22 @@ impl<G: Game> Engine<G> {
                 println!("Detected");
                 trans.moveSprite(mouseX, mouseY);
 
-                if self.input.is_mouse_pressed(winit::event::MouseButton::Left) {
-                    //let go
-                }
+            
+
+                // if self.input.is_mouse_pressed(winit::event::MouseButton::Left) {
+                //     //let go
+                // }
             }
         }
+
+    }
+
+    pub fn mouse_localized(&self, h: f32) -> (f64, f64) {
+        let mouse_position = self.input.mouse_pos();
+        let mut mouseX = mouse_position.x/(self.ret_scale() + 1 as f64);
+        let mut mouseY = h as f64 - mouse_position.y/(self.ret_scale() + 1 as f64);
+
+        return (mouseX, mouseY);
     }
 }
 
