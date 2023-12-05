@@ -80,6 +80,21 @@ impl Transform {
     pub fn translation(&self) -> [f32; 2] {
         [self.x, self.y]
     }
+
+    pub fn contains_point(&self, mouse_x : f32, mouse_y: f32) -> bool {
+        let tl = self.x;
+        let tr = tl + self.w as f32;
+        let y1 = self.y;
+        let y2 = y1 - self.h as f32;
+
+        if mouse_x < tl || mouse_x > tr {
+            return false;
+        } else if mouse_y < y2 || mouse_y > y1 {
+            return false;
+        } else {
+            true
+        }
+    }
 }
 
 /// Camera2D is a transform for a sprite layer, defining a scale
