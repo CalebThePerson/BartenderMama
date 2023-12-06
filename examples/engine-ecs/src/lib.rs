@@ -18,6 +18,7 @@ pub use collision::Contact;
 
 const COLLISION_STEPS: usize = 5;
 use gfx::TextDraw;
+use hecs::Entity;
 
 pub mod geom;
 
@@ -375,6 +376,19 @@ impl<G: Game> Engine<G> {
             trans.y = 90.0;
             counter += 1.0;
         }
+    }
+
+    pub fn updateGlass(&mut self, glassState: u32, glassEntity: Entity) {
+        let mut glass = self
+            .world()
+            .query_one::<(&mut Sprite, &Transform, &bool)>(glassEntity)
+            .unwrap();
+        let (mut sprite, transform, isBottle) = glass.get().unwrap();
+        if glassState == 0 {
+            sprite.1 = SheetRegion::new(0, 209, 1, 480, 7, 7);
+        } else if glassState == 1 {
+            sprite.1 = SheetRegion::new(0, 200, 1, 480, 7, 7)
+        } 
     }
 }
 

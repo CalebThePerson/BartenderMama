@@ -68,7 +68,6 @@ const GLASS_UVS: SheetRegion = SheetRegion::new(0, 36, 1, 480, 7, 7);
 
 ///Bundle Vectors
 const bottleBundles: Vec<&BottleBundle> = Vec::new(); //Delete later dont really need
-const glassVec: Vec<&GlassBundle> = Vec::new();
 /// //
 
 struct Game {
@@ -77,6 +76,8 @@ struct Game {
     spritesheet: engine::Spritesheet,
     held_bottle: Option<Entity>,
     reset: bool,
+    glassState: u32,
+    glass: Entity,
 }
 
 impl engine::Game for Game {
@@ -102,7 +103,7 @@ impl engine::Game for Game {
         make_bar(spritesheet, engine, W / 2.0, 15.0, W, 47.0);
         make_shelf(spritesheet, engine, W / 2.0, 60.0 + 20.0, 160.0, 16.0);
         make_shelf(spritesheet, engine, W / 2.0, 100.0 + 20.0, 160.0, 16.0);
-        make_glass(spritesheet, engine, W / 2.0, 45.0, 14.0, 14.0);
+        let glass = make_glass(spritesheet, engine, W / 2.0, 45.0, 14.0, 14.0);
 
         for i in 0..5 {
             //Making bottles on bottom shelf
@@ -122,6 +123,8 @@ impl engine::Game for Game {
             spritesheet,
             held_bottle: None,
             reset: false,
+            glassState: 0,
+            glass: glass,
         }
     }
 
@@ -130,6 +133,12 @@ impl engine::Game for Game {
 
         if self.reset {
             engine.resetBottles(); // Resets all the bottles positions and activiates on the second mouse click
+            engine.updateGlass(self.glassState, self.glass);
+            self.glassState += 1;
+            if self.glassState > 3 {
+                self.glassState = 0;
+            }
+            self.reset = false;
         }
 
         if self.held_bottle.is_some() {
@@ -289,8 +298,8 @@ fn make_glass(
     y: f32,
     w: f32,
     h: f32,
-) {
-    let theBundle = GlassBundle(
+) -> Entity {
+    engine.spawn(GlassBundle(
         Sprite(spritesheet, GLASS_UVS),
         Transform {
             x,
@@ -300,9 +309,7 @@ fn make_glass(
             rot: 0.0,
         },
         true,
-    );
-    glassVec.push(&theBundle);
-    engine.spawn(theBundle);
+    ))
 }
 
 fn find_index_by_coordinates(
