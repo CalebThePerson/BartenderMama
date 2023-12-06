@@ -63,12 +63,7 @@ const SHELF_UVS: SheetRegion = SheetRegion::new(0, 1, 50, 480, 264, 16);
 const BAR_UVS: SheetRegion = SheetRegion::new(0, 45, 1, 480, 127, 47);
 const BOTTLE_UVS: SheetRegion = SheetRegion::new(0, 1, 1, 480, 3, 11);
 const GLASS_UVS: SheetRegion = SheetRegion::new(0, 36, 1, 480, 7, 7);
-
 //////
-
-///Bundle Vectors
-const bottleBundles: Vec<&BottleBundle> = Vec::new(); //Delete later dont really need
-/// //
 
 struct Game {
     apple_timer: u32,
@@ -105,15 +100,18 @@ impl engine::Game for Game {
         make_shelf(spritesheet, engine, W / 2.0, 100.0 + 20.0, 160.0, 16.0);
         let glass = make_glass(spritesheet, engine, W / 2.0, 45.0, 14.0, 14.0);
 
-        for i in 0..5 {
+        let bottles = vec![1, 6, 11, 16, 21, 31];
+
+        for (index, &item) in bottles.iter().enumerate() {
             //Making bottles on bottom shelf
             make_bottle(
                 spritesheet,
                 engine,
-                (W / 3.0) + (i * 20) as f32,
+                (W / 3.0) + (index * 20) as f32,
                 90.0,
                 3.0 * 2.6,
                 11.0 * 2.6,
+                SheetRegion::new(0, item, 1, 480, 3, 11),
             );
         }
 
@@ -270,9 +268,10 @@ fn make_bottle(
     y: f32,
     w: f32,
     h: f32,
+    UVS: SheetRegion,
 ) {
     let theBundle = BottleBundle(
-        Sprite(spritesheet, BOTTLE_UVS),
+        Sprite(spritesheet, UVS),
         Transform {
             x,
             y,
