@@ -9,6 +9,13 @@ use rand::Rng;
 use winit::dpi::LogicalPosition;
 use winit::window::{self, Window};
 type Engine = engine::Engine<Game>;
+use kira::{
+	manager::{
+		AudioManager, AudioManagerSettings,
+		backend::DefaultBackend,
+	},
+	sound::static_sound::{StaticSoundData, StaticSoundSettings},
+};
 
 
 //Bundles
@@ -20,7 +27,7 @@ struct DecoBundle(Sprite, Transform);
 
 //Bottle Bundle, feel free to add on as you see fit
 #[derive(hecs::Bundle)]
-struct BottleBundle(Sprite, Transform, Solid, BoxCollision, bool);
+struct BottleBundle(Sprite, Transform, Solid, BoxCollision, bool, String);
 
 #[derive(hecs::Bundle)]
 struct GlassBundle(Sprite, Transform, bool); //Getting rid of Solid, BoxCollision because we need to be able to queruy for it plus it shouldnt need those two things
@@ -45,6 +52,51 @@ struct Game {
     pour: bool,
     glass_state: u32,
     glass: Entity,
+    audio: AudioManager
+}
+#[derive(Clone)]
+struct Bottle {
+    name: String,
+    compatible: Vec<Bottle>
+}
+impl Bottle {
+    // fn name(&self) -> String {
+    //     self.name.clone()
+    // }
+
+    // fn tequila() -> Self {
+    //     let compatible_drinks = vec![Bottle::lychee(), Bottle::limejuice()];
+
+    //     Bottle { name: "tequila".into(), compatible: (compatible_drinks) }
+    // }
+
+    // fn lychee() -> Self {
+    //     let compatible_drinks = vec![Bottle::tequila(), Bottle::limejuice(), ];
+
+    //     Bottle { name: "lychee".into(), compatible: (compatible_drinks) }
+    // }
+
+    // fn limejuice() -> Self {
+    //     let compatible_drinks = vec![Bottle::vodka(), Bottle::tequila(), Bottle::jagermeister()];
+    //     Bottle { name: "limejuice".into(), compatible: (compatible_drinks) }
+    // }
+
+    // fn redbull() -> Self {
+    //     let compatible_drinks = vec![Bottle::jagermeister(), Bottle::vodka()];
+
+    //     Bottle { name: "redbull".into(), compatible: (compatible_drinks) }
+    // }
+
+    // fn jagermeister() -> Self {
+    //     let compatible_drinks = vec![Bottle::redbull()];
+
+    //     Bottle { name: "jagermeister".into(), compatible: (compatible_drinks) }
+    // }
+
+    // fn vodka() -> Self {
+    //     let compatible_drinks = vec![Bottle::lychee(), Bottle::redbull()];
+    //     Bottle { name: "vodka".into(), compatible: (compatible_drinks) }
+    // }
 }
 
 impl engine::Game for Game {
@@ -84,8 +136,11 @@ impl engine::Game for Game {
                 3.0 * 2.9,
                 11.0 * 2.6,
                 SheetRegion::new(0, item, 1, 480, 3, 11),
+                "tequila".into()
             );
         }
+
+        let manager = AudioManager::<DefaultBackend>::new(AudioManagerSettings::default()).unwrap();
 
         Game {
             held_bottle: None,
@@ -93,6 +148,7 @@ impl engine::Game for Game {
             glass_state: 0,
             glass: glass,
             pour: false,
+            audio: manager
         }
     }
 
@@ -105,7 +161,15 @@ impl engine::Game for Game {
         }
 
         if self.reset {
+            let sound = StaticSoundData::from_file(
+                "content/sound/pick.mp3",
+                StaticSoundSettings::default().volume(2.5),
+            )
+            .unwrap();
+            self.audio.play(sound);
+            
             engine.resetBottles(); // Resets all the bottles positions and activiates on the second mouse click
+            self.reset = false;
         }
 
         if self.held_bottle.is_some() {
@@ -124,6 +188,14 @@ impl engine::Game for Game {
                                 self.glass_state += 1;
                             }
                             self.pour = true;
+
+                            let sound = StaticSoundData::from_file(
+                                "content/sound/pour.mp3",
+                                StaticSoundSettings::default().volume(2.5),
+                            )
+                            .unwrap();
+        
+                            self.audio.play(sound);
                         }
                         if engine.input.is_key_down(engine::Key::Space) {
                             println!("space");
@@ -164,6 +236,14 @@ impl engine::Game for Game {
                         self.glass_state = 0;
                         self.pour = true;
                         println!("empty glass: {}", self.glass_state);
+
+                        let sound = StaticSoundData::from_file(
+                            "content/sound/empty.mp3",
+                            StaticSoundSettings::default().volume(2.5),
+                        )
+                        .unwrap();
+    
+                        self.audio.play(sound);
                     }
                 }
             }
@@ -175,6 +255,14 @@ impl engine::Game for Game {
             {
                 if trans.detectMouseCollision(mouseX as f64, mouseY as f64) {
                     self.held_bottle = Some(bottle);
+                    let sound = StaticSoundData::from_file(
+                        "content/sound/pick.mp3",
+                        StaticSoundSettings::default().volume(2.5),
+                    )
+                    .unwrap();
+
+                    self.audio.play(sound);
+                    
                 }
             }
         }
@@ -250,6 +338,7 @@ fn make_bottle(
     w: f32,
     h: f32,
     UVS: SheetRegion,
+    bottle: String
 ) {
     let theBundle = BottleBundle(
         Sprite(spritesheet, UVS),
@@ -266,6 +355,7 @@ fn make_bottle(
             size: Vec2 { x: w, y: h },
         }),
         true,
+        bottle
     );
 
     engine.spawn(theBundle);
