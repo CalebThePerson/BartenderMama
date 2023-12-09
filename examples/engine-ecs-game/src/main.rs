@@ -10,25 +10,6 @@ use winit::dpi::LogicalPosition;
 use winit::window::{self, Window};
 type Engine = engine::Engine<Game>;
 
-// Stuff for testing not really important
-struct Apple();
-struct Guy();
-struct Bottle();
-
-// Bundles
-
-struct GuyBundle(Sprite, Transform, Pushable, BoxCollision, Physics, Guy);
-#[derive(hecs::Bundle)]
-
-struct AppleBundle(
-    Sprite, //
-    Transform,
-    SolidPushable,
-    BoxCollision,
-    Physics,
-    Apple,
-);
-/////
 
 //Bundles
 #[derive(hecs::Bundle)]
@@ -50,13 +31,6 @@ const W: f32 = 320.0;
 const H: f32 = 240.0;
 /////
 
-//Testing Variables for Physics
-const APPLE_SIZE: Vec2 = Vec2 { x: 10.0, y: 20.0 };
-const SPRITE_MAX: usize = 16;
-const APPLE_MAX: usize = 128;
-const APPLE_INTERVAL: std::ops::Range<u32> = 1..10;
-const APPLE_SPEED_RANGE: std::ops::Range<f32> = (-2.0)..(-0.5);
-////
 
 //Static UVS
 const SHELF_UVS: SheetRegion = SheetRegion::new(0, 1, 50, 480, 264, 16);
@@ -66,12 +40,10 @@ const GLASS_UVS: SheetRegion = SheetRegion::new(0, 36, 1, 480, 7, 7);
 //////
 
 struct Game {
-    apple_timer: u32,
-    score: u32,
-    spritesheet: engine::Spritesheet,
     held_bottle: Option<Entity>,
     reset: bool,
-    glassState: u32,
+    pour: bool,
+    glass_state: u32,
     glass: Entity,
 }
 
@@ -98,7 +70,7 @@ impl engine::Game for Game {
         make_bar(spritesheet, engine, W / 2.0, 15.0, W, 47.0);
         make_shelf(spritesheet, engine, W / 2.0, 60.0 + 20.0, 160.0, 16.0);
         make_shelf(spritesheet, engine, W / 2.0, 100.0 + 20.0, 160.0, 16.0);
-        let glass = make_glass(spritesheet, engine, W / 2.0, 45.0, 14.0, 14.0);
+        let glass = make_glass(spritesheet, engine, W / 2.0, 45.0, 17.0, 19.0);
 
         let bottles = vec![1, 6, 11, 16, 21, 31];
 
@@ -108,35 +80,32 @@ impl engine::Game for Game {
                 spritesheet,
                 engine,
                 (W / 3.0) + (index * 20) as f32,
-                90.0,
-                3.0 * 2.6,
+                95.0,
+                3.0 * 2.9,
                 11.0 * 2.6,
                 SheetRegion::new(0, item, 1, 480, 3, 11),
             );
         }
 
         Game {
-            apple_timer: 0,
-            score: 0,
-            spritesheet,
             held_bottle: None,
             reset: false,
-            glassState: 0,
+            glass_state: 0,
             glass: glass,
+            pour: false,
         }
     }
 
     fn update(&mut self, engine: &mut Engine) {
         if engine.frame_number() % 600 == 0 {}
 
+        if self.pour {
+            engine.updateGlass(self.glass_state, self.glass);
+            self.pour = false;
+        }
+
         if self.reset {
             engine.resetBottles(); // Resets all the bottles positions and activiates on the second mouse click
-            engine.updateGlass(self.glassState, self.glass);
-            self.glassState += 1;
-            if self.glassState > 3 {
-                self.glassState = 0;
-            }
-            self.reset = false;
         }
 
         if self.held_bottle.is_some() {
@@ -150,7 +119,14 @@ impl engine::Game for Game {
                 if !self.held_bottle.is_none() {
                     if bottle == self.held_bottle.unwrap() {
                         println!("same bottle");
+                        if engine.input.is_key_pressed(engine::Key::Space) {
+                            if self.glass_state < 3 {
+                                self.glass_state += 1;
+                            }
+                            self.pour = true;
+                        }
                         if engine.input.is_key_down(engine::Key::Space) {
+                            println!("space");
                             trans.rotc_Sprite();
                         } else {
                             trans.rotcounter_Sprite();
@@ -176,14 +152,28 @@ impl engine::Game for Game {
 
             let (mut mouseX, mut mouseY) = engine.mouse_localized(H);
 
+            println!("{}, {}", mouseX, mouseY);
+
+            for (glass, (sprite, trans, isBottle)) in engine
+            .world()
+            .query::<(&Sprite, &mut Transform, &bool)>()
+            .iter()
+            {
+                if trans.detectMouseCollision(mouseX as f64, mouseY as f64) {
+                    if glass == self.glass {
+                        self.glass_state = 0;
+                        self.pour = true;
+                        println!("empty glass: {}", self.glass_state);
+                    }
+                }
+            }
+
             for (bottle, (sprite, trans, solid, collision, isBottle)) in engine
                 .world()
                 .query::<(&Sprite, &mut Transform, &Solid, &BoxCollision, &bool)>()
                 .iter()
             {
-                if trans.detectMouseCollision(mouseX, mouseY) {
-                    println!("Detected");
-
+                if trans.detectMouseCollision(mouseX as f64, mouseY as f64) {
                     self.held_bottle = Some(bottle);
                 }
             }
@@ -194,16 +184,7 @@ impl engine::Game for Game {
         engine: &mut Engine,
         _contacts: impl Iterator<Item = engine::Contact>,
         triggers: impl Iterator<Item = engine::Contact>,
-    ) {
-        for engine::Contact(thing_a, thing_b, _amt) in triggers {
-            let ent_a = engine.world().entity(thing_a).unwrap();
-            let ent_b = engine.world().entity(thing_b).unwrap();
-            if ent_a.has::<Apple>() && ent_b.has::<Guy>() {
-                engine.despawn(thing_a).unwrap();
-                self.score += 1;
-            }
-        }
-    }
+    ) {}
     fn render(&mut self, engine: &mut Engine) {}
 }
 fn main() {

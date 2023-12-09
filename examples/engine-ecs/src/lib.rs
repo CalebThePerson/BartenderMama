@@ -19,6 +19,7 @@ pub use collision::Contact;
 const COLLISION_STEPS: usize = 5;
 use gfx::TextDraw;
 use hecs::Entity;
+use winit::dpi::LogicalPosition;
 
 pub mod geom;
 
@@ -305,7 +306,7 @@ impl<G: Game> Engine<G> {
     }
 
     pub fn ret_scale(&self) -> f64 {
-        println!("{}", self.window.scale_factor());
+        // println!("{}", self.window.scale_factor());
         return self.window.scale_factor();
     }
 
@@ -348,7 +349,7 @@ impl<G: Game> Engine<G> {
         {
             if trans.detectMouseCollision(mouseX, mouseY) {
                 println!("Detected");
-                trans.moveSprite(mouseX, mouseY);
+                trans.moveSprite(mouseX as f32, mouseY as f32);
 
                 // if self.input.is_mouse_pressed(winit::event::MouseButton::Left) {
                 //     //let go
@@ -357,10 +358,20 @@ impl<G: Game> Engine<G> {
         }
     }
 
-    pub fn mouse_localized(&self, h: f32) -> (f64, f64) {
+    pub fn mouse_localized(&self, h: f32) -> (f32, f32) {
+        
         let mouse_position = self.input.mouse_pos();
-        let mut mouseX = mouse_position.x / (self.ret_scale() + 1 as f64);
-        let mut mouseY = h as f64 - mouse_position.y / (self.ret_scale() + 1 as f64);
+        // let logical_mouse_position: LogicalPosition<f64> = self.input.mouse_pos().to_logical(self.ret_scale());
+        // let mut mouseX = mouse_position.x as f32 / ((self.ret_scale() as f32 + 1.5 as f32));
+        // let mut mouseY = h as f32 - mouse_position.y as f32 / ((self.ret_scale() as f32+ 1.5 as f32));
+        // let mouseX = logical_mouse_position.x;
+        // let mouseY = logical_mouse_position.y;
+        
+        let (mouseX, mouseY) = (((mouse_position.x as f32/ (self.window.inner_size().width as f32/self.camera.screen_size[0]))),
+                                (self.camera.screen_size[1] - (mouse_position.y as f32) / (self.window.inner_size().height as f32/ self.camera.screen_size[1]) as f32));
+
+
+        // print!("logical: {},{}\nphysical:{},{}\nscreen:{},{}\n", mouseX, mouseY, (self.window.inner_size().width as f32/self.camera.screen_size[1]), (self.window.inner_size().height as f32/ self.camera.screen_size[1]), self.window.inner_size().height, self.window.inner_size().width);
 
         return (mouseX, mouseY);
     }
@@ -372,8 +383,8 @@ impl<G: Game> Engine<G> {
             .query::<(&Sprite, &mut Transform, &Solid, &BoxCollision, &bool)>()
             .iter()
         {
-            trans.x = (counter * 20.0) + 106.0;
-            trans.y = 90.0;
+            trans.x = (counter * 20.0) + 106.5;
+            trans.y = 95.0;
             counter += 1.0;
         }
     }
@@ -385,10 +396,13 @@ impl<G: Game> Engine<G> {
             .unwrap();
         let (mut sprite, transform, isBottle) = glass.get().unwrap();
         if glassState == 0 {
-            sprite.1 = SheetRegion::new(0, 209, 1, 480, 7, 7);
+            sprite.1 = SheetRegion::new(0, 36, 1, 480, 7, 7);
         } else if glassState == 1 {
+            sprite.1 = SheetRegion::new(0, 209, 1, 480, 7, 7);
+        } else if glassState == 2 {
             sprite.1 = SheetRegion::new(0, 200, 1, 480, 7, 7)
-        } 
+        }
+        print!("glass updated to: {}\n", glassState);
     }
 }
 

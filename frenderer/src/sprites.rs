@@ -93,9 +93,9 @@ impl Transform {
             && mouseY <= (bottom_boundary as f64)
     }
 
-    pub fn moveSprite(&mut self, mouseX: f64, mouseY: f64) {
-        self.x = mouseX as f32;
-        self.y = mouseY as f32;
+    pub fn moveSprite(&mut self, mouseX: f32, mouseY: f32) {
+        self.x = mouseX;
+        self.y = mouseY;
     }
 
     pub fn rotc_Sprite(&mut self) {
