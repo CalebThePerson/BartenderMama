@@ -1,7 +1,11 @@
+use std::ops::DerefMut;
+
 pub use bytemuck::Zeroable;
+use collision::{BoxCollision, Solid};
+use components::Sprite;
 pub use frenderer::{
     input::{Input, Key},
-    wgpu, Camera2D as Camera, Frenderer, SheetRegion, Transform,
+    wgpu, Camera2D as Camera, Frenderer, SheetRegion, SpriteRenderer, Transform,
 };
 pub use hecs;
 mod gfx;
@@ -14,6 +18,8 @@ pub use collision::Contact;
 
 const COLLISION_STEPS: usize = 5;
 use gfx::TextDraw;
+use hecs::Entity;
+use winit::dpi::LogicalPosition;
 
 pub mod geom;
 
@@ -41,6 +47,7 @@ pub struct Engine<G: Game> {
     net_times: std::collections::VecDeque<f32>,
     sim_frame: usize,
     _game: std::marker::PhantomData<G>,
+    pub grab_bottle: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -76,6 +83,7 @@ impl<G: Game> Engine<G> {
             texts: Vec::with_capacity(128),
             sim_frame: 0,
             _game: std::marker::PhantomData,
+            grab_bottle: false,
         }
     }
     pub fn world(&self) -> &hecs::World {
@@ -296,6 +304,12 @@ impl<G: Game> Engine<G> {
     pub fn frame_number(&self) -> usize {
         self.sim_frame
     }
+
+    pub fn ret_scale(&self) -> f64 {
+        // println!("{}", self.window.scale_factor());
+        return self.window.scale_factor();
+    }
+
     pub fn add_spritesheet(
         &mut self,
         imgs: &[&image::RgbaImage],
@@ -321,4 +335,77 @@ impl<G: Game> Engine<G> {
         self.texts
             .push(TextDraw(font.font.clone(), text, pos, char_sz));
     }
+
+    //IDK WHAT TO CALL THIS IM IN PAIN
+    pub fn bottleDection(&mut self, mut mouseX: f64, mut mouseY: f64) {
+        // mouseX = (mouseX as f64 / 1581.0) * 320.0 as f64;
+        // mouseY = ((mouseY as f64 / 1185.0) * 240.0 as f64) - 53.0;
+        println!("{} {}", mouseX, mouseY);
+
+        for (bottle, (sprite, trans, solid, collision, isBottle)) in self
+            .world()
+            .query::<(&Sprite, &mut Transform, &Solid, &BoxCollision, &bool)>()
+            .iter()
+        {
+            if trans.detectMouseCollision(mouseX, mouseY) {
+                println!("Detected");
+                trans.moveSprite(mouseX as f32, mouseY as f32);
+
+                // if self.input.is_mouse_pressed(winit::event::MouseButton::Left) {
+                //     //let go
+                // }
+            }
+        }
+    }
+
+    pub fn mouse_localized(&self, h: f32) -> (f32, f32) {
+        
+        let mouse_position = self.input.mouse_pos();
+        // let logical_mouse_position: LogicalPosition<f64> = self.input.mouse_pos().to_logical(self.ret_scale());
+        // let mut mouseX = mouse_position.x as f32 / ((self.ret_scale() as f32 + 1.5 as f32));
+        // let mut mouseY = h as f32 - mouse_position.y as f32 / ((self.ret_scale() as f32+ 1.5 as f32));
+        // let mouseX = logical_mouse_position.x;
+        // let mouseY = logical_mouse_position.y;
+        
+        let (mouseX, mouseY) = (((mouse_position.x as f32/ (self.window.inner_size().width as f32/self.camera.screen_size[0]))),
+                                (self.camera.screen_size[1] - (mouse_position.y as f32) / (self.window.inner_size().height as f32/ self.camera.screen_size[1]) as f32));
+
+
+        // print!("logical: {},{}\nphysical:{},{}\nscreen:{},{}\n", mouseX, mouseY, (self.window.inner_size().width as f32/self.camera.screen_size[1]), (self.window.inner_size().height as f32/ self.camera.screen_size[1]), self.window.inner_size().height, self.window.inner_size().width);
+
+        return (mouseX, mouseY);
+    }
+
+    pub fn resetBottles(&mut self) {
+        let mut counter = 0.0;
+        for (bottle, (sprite, trans, solid, collision, isBottle)) in self
+            .world()
+            .query::<(&Sprite, &mut Transform, &Solid, &BoxCollision, &bool)>()
+            .iter()
+        {
+            trans.x = (counter * 20.0) + 106.5;
+            trans.y = 95.0;
+            counter += 1.0;
+        }
+    }
+
+    pub fn updateGlass(&mut self, glassState: u32, glassEntity: Entity) {
+        let mut glass = self
+            .world()
+            .query_one::<(&mut Sprite, &Transform, &bool)>(glassEntity)
+            .unwrap();
+        let (mut sprite, transform, isBottle) = glass.get().unwrap();
+        if glassState == 0 {
+            sprite.1 = SheetRegion::new(0, 36, 1, 480, 7, 7);
+        } else if glassState == 1 {
+            sprite.1 = SheetRegion::new(0, 209, 1, 480, 7, 7);
+        } else if glassState == 2 {
+            sprite.1 = SheetRegion::new(0, 200, 1, 480, 7, 7)
+        }
+        print!("glass updated to: {}\n", glassState);
+    }
 }
+
+// fn yup(trans: mut &Trans ,mouseX : f32, mouseY : f32) {
+
+// }

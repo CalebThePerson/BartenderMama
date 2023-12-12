@@ -15,6 +15,7 @@ bitflags = {version="2.4", features=["serde","bytemuck"]}
 serde = {version="1.0", features=["derive"]}
 hecs = {version="0.10.3"}
 smallvec = {version="1.11",features=["union","const_generics"]}
+copyless = "0.1.5"
 
 [features]
 default = []

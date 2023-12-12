@@ -1,46 +1,102 @@
+use std::ops::Deref;
+
+use engine::Spritesheet;
 use engine_ecs as engine;
+use engine_ecs::wgpu;
 use engine_ecs::{components::*, geom::*, Camera, SheetRegion};
 use hecs::Entity;
 use rand::Rng;
+use winit::dpi::LogicalPosition;
+use winit::window::{self, Window};
 type Engine = engine::Engine<Game>;
+use kira::{
+	manager::{
+		AudioManager, AudioManagerSettings,
+		backend::DefaultBackend,
+	},
+	sound::static_sound::{StaticSoundData, StaticSoundSettings},
+};
 
-// Components (markers)
-struct Apple();
-struct Guy();
 
-// Bundles
+//Bundles
 #[derive(hecs::Bundle)]
-struct WallBundle(Sprite, Transform, Solid, BoxCollision);
-#[derive(hecs::Bundle)]
-struct GuyBundle(Sprite, Transform, Pushable, BoxCollision, Physics, Guy);
-#[derive(hecs::Bundle)]
-struct AppleBundle(
-    Sprite,
-    Transform,
-    SolidPushable,
-    BoxCollision,
-    Physics,
-    Apple,
-);
+struct EnvBundle(Sprite, Transform, Solid, BoxCollision);
+
 #[derive(hecs::Bundle)]
 struct DecoBundle(Sprite, Transform);
 
+//Bottle Bundle, feel free to add on as you see fit
+#[derive(hecs::Bundle)]
+struct BottleBundle(Sprite, Transform, Solid, BoxCollision, bool, String);
+
+#[derive(hecs::Bundle)]
+struct GlassBundle(Sprite, Transform, bool); //Getting rid of Solid, BoxCollision because we need to be able to queruy for it plus it shouldnt need those two things
+                                             ////
+
+///Width and height of the window
 const W: f32 = 320.0;
 const H: f32 = 240.0;
-const GUY_SPEED: f32 = 2.0;
-const GUY_SIZE: Vec2 = Vec2 { x: 16.0, y: 16.0 };
-const APPLE_SIZE: Vec2 = Vec2 { x: 16.0, y: 16.0 };
-const APPLE_MAX: usize = 128;
-const APPLE_INTERVAL: std::ops::Range<u32> = 1..10;
-const WALL_UVS: SheetRegion = SheetRegion::new(0, 0, 480, 12, 8, 8);
-const APPLE_SPEED_RANGE: std::ops::Range<f32> = (-2.0)..(-0.5);
+/////
+
+
+//Static UVS
+const SHELF_UVS: SheetRegion = SheetRegion::new(0, 1, 50, 480, 264, 16);
+const BAR_UVS: SheetRegion = SheetRegion::new(0, 45, 1, 480, 127, 47);
+const BOTTLE_UVS: SheetRegion = SheetRegion::new(0, 1, 1, 480, 3, 11);
+const GLASS_UVS: SheetRegion = SheetRegion::new(0, 36, 1, 480, 7, 7);
+//////
 
 struct Game {
-    apple_timer: u32,
-    score: u32,
-    guy: Entity,
-    spritesheet: engine::Spritesheet,
-    font: engine::BitFont,
+    held_bottle: Option<Entity>,
+    reset: bool,
+    pour: bool,
+    glass_state: u32,
+    glass: Entity,
+    audio: AudioManager
+}
+#[derive(Clone)]
+struct Bottle {
+    name: String,
+    compatible: Vec<Bottle>
+}
+impl Bottle {
+    // fn name(&self) -> String {
+    //     self.name.clone()
+    // }
+
+    // fn tequila() -> Self {
+    //     let compatible_drinks = vec![Bottle::lychee(), Bottle::limejuice()];
+
+    //     Bottle { name: "tequila".into(), compatible: (compatible_drinks) }
+    // }
+
+    // fn lychee() -> Self {
+    //     let compatible_drinks = vec![Bottle::tequila(), Bottle::limejuice(), ];
+
+    //     Bottle { name: "lychee".into(), compatible: (compatible_drinks) }
+    // }
+
+    // fn limejuice() -> Self {
+    //     let compatible_drinks = vec![Bottle::vodka(), Bottle::tequila(), Bottle::jagermeister()];
+    //     Bottle { name: "limejuice".into(), compatible: (compatible_drinks) }
+    // }
+
+    // fn redbull() -> Self {
+    //     let compatible_drinks = vec![Bottle::jagermeister(), Bottle::vodka()];
+
+    //     Bottle { name: "redbull".into(), compatible: (compatible_drinks) }
+    // }
+
+    // fn jagermeister() -> Self {
+    //     let compatible_drinks = vec![Bottle::redbull()];
+
+    //     Bottle { name: "jagermeister".into(), compatible: (compatible_drinks) }
+    // }
+
+    // fn vodka() -> Self {
+    //     let compatible_drinks = vec![Bottle::lychee(), Bottle::redbull()];
+    //     Bottle { name: "vodka".into(), compatible: (compatible_drinks) }
+    // }
 }
 
 impl engine::Game for Game {
@@ -59,118 +115,156 @@ impl engine::Game for Game {
                 .into_rgba8()
         };
         #[cfg(not(target_arch = "wasm32"))]
-        let sprite_img = image::open("content/demo.png").unwrap().into_rgba8();
-        let spritesheet = engine.add_spritesheet(&[&sprite_img], Some("demo spritesheet"));
-        engine.spawn(DecoBundle(
-            Sprite(spritesheet, SheetRegion::new(0, 0, 0, 16, 640, 480)),
-            Transform {
-                x: W / 2.0,
-                y: H / 2.0,
-                w: W as u16,
-                h: H as u16,
-                rot: 0.0,
-            },
-        ));
-        let guy = engine.spawn(GuyBundle(
-            Sprite(spritesheet, SheetRegion::new(0, 16, 480, 8, 16, 16)),
-            Transform {
-                x: W / 2.0,
-                y: 24.0,
-                w: GUY_SIZE.x as u16,
-                h: GUY_SIZE.y as u16,
-                rot: 0.0,
-            },
-            Pushable::default(),
-            BoxCollision(AABB {
-                center: Vec2::ZERO,
-                size: GUY_SIZE,
-            }),
-            Physics { vel: Vec2::ZERO },
-            Guy(),
-        ));
-        // floor
-        make_wall(spritesheet, engine, W / 2.0, 8.0, W, 16.0);
-        // left wall
-        make_wall(spritesheet, engine, 8.0, H / 2.0, 16.0, H);
-        // right wall
-        make_wall(spritesheet, engine, W - 8.0, H / 2.0, 16.0, H);
-        let font = engine.make_font(
-            spritesheet,
-            '0'..='9',
-            SheetRegion::new(0, 0, 512, 0, 80, 8),
-            10,
-        );
-        Game {
-            apple_timer: 0,
-            score: 0,
-            font,
-            spritesheet,
-            guy,
-        }
-    }
-    fn update(&mut self, engine: &mut Engine) {
-        if engine.frame_number() % 600 == 0 {
-            println!(
-                "{:.6} : {:.6} --- {:.6} : {:.6} --- {:.6} : {:.6} --- {:.6}",
-                engine.avg_sim_time(),
-                engine.max_sim_time(),
-                engine.avg_render_time(),
-                engine.max_render_time(),
-                engine.avg_net_time(),
-                engine.max_net_time(),
-                Self::DT
+        let bar_img = image::open("content/bar_sheet.png").unwrap().into_rgba8();
+        let spritesheet = engine.add_spritesheet(&[&bar_img], Some("The Bar"));
+
+        //Spawning the bar in
+        make_bar(spritesheet, engine, W / 2.0, 15.0, W, 47.0);
+        make_shelf(spritesheet, engine, W / 2.0, 60.0 + 20.0, 160.0, 16.0);
+        make_shelf(spritesheet, engine, W / 2.0, 100.0 + 20.0, 160.0, 16.0);
+        let glass = make_glass(spritesheet, engine, W / 2.0, 45.0, 17.0, 19.0);
+
+        let bottles = vec![1, 6, 11, 16, 21, 31];
+
+        for (index, &item) in bottles.iter().enumerate() {
+            //Making bottles on bottom shelf
+            make_bottle(
+                spritesheet,
+                engine,
+                (W / 3.0) + (index * 20) as f32,
+                95.0,
+                3.0 * 2.9,
+                11.0 * 2.6,
+                SheetRegion::new(0, item, 1, 480, 3, 11),
+                "tequila".into()
             );
         }
-        let dir = engine.input.key_axis(engine::Key::Left, engine::Key::Right);
-        engine
-            .world()
-            .query_one::<&mut Physics>(self.guy)
-            .unwrap()
-            .get()
-            .unwrap()
-            .vel = Vec2 {
-            x: dir * GUY_SPEED,
-            y: 0.0,
-        };
-        let mut rng = rand::thread_rng();
-        let mut apple_count = 0;
-        let mut to_remove = vec![];
-        for (apple, (_, trf)) in engine.world().query::<(&Apple, &Transform)>().iter() {
-            if trf.y < -8.0 {
-                to_remove.push(apple);
-            } else {
-                apple_count += 1;
+
+        let manager = AudioManager::<DefaultBackend>::new(AudioManagerSettings::default()).unwrap();
+
+        Game {
+            held_bottle: None,
+            reset: false,
+            glass_state: 0,
+            glass: glass,
+            pour: false,
+            audio: manager
+        }
+    }
+
+    fn update(&mut self, engine: &mut Engine) {
+        if engine.frame_number() % 600 == 0 {}
+
+        if self.pour {
+            engine.updateGlass(self.glass_state, self.glass);
+            self.pour = false;
+        }
+
+        if self.reset {
+            let sound = StaticSoundData::from_file(
+                "content/sound/pick.mp3",
+                StaticSoundSettings::default().volume(2.5),
+            )
+            .unwrap();
+            self.audio.play(sound);
+            
+            engine.resetBottles(); // Resets all the bottles positions and activiates on the second mouse click
+            self.reset = false;
+        }
+
+        if self.held_bottle.is_some() {
+            println!("moving");
+            for (bottle, (sprite, trans, solid, collision, isBottle)) in engine
+                .world()
+                .query::<(&Sprite, &mut Transform, &Solid, &BoxCollision, &bool)>()
+                .iter()
+            {
+                //
+                if !self.held_bottle.is_none() {
+                    if bottle == self.held_bottle.unwrap() {
+                        println!("same bottle");
+                        if engine.input.is_key_pressed(engine::Key::Space) {
+                            if self.glass_state < 3 {
+                                self.glass_state += 1;
+                            }
+                            self.pour = true;
+
+                            let sound = StaticSoundData::from_file(
+                                "content/sound/pour.mp3",
+                                StaticSoundSettings::default().volume(2.5),
+                            )
+                            .unwrap();
+        
+                            self.audio.play(sound);
+                        }
+                        if engine.input.is_key_down(engine::Key::Space) {
+                            println!("space");
+                            trans.rotc_Sprite();
+                        } else {
+                            trans.rotcounter_Sprite();
+                        }
+                        let (mouseX, mouseY) = engine.mouse_localized(H);
+                        println!("{}, {}", mouseX, mouseY);
+                        trans.moveSprite(mouseX, mouseY);
+                        if engine
+                            .input
+                            .is_mouse_pressed(winit::event::MouseButton::Left)
+                        {
+                            self.held_bottle = None;
+                            self.reset = true;
+                        }
+                    }
+                }
             }
-        }
-        for apple in to_remove {
-            engine.despawn(apple).unwrap();
-        }
-        if self.apple_timer > 0 {
-            self.apple_timer -= 1;
-        } else if apple_count < APPLE_MAX {
-            let _apple = engine.spawn(AppleBundle(
-                Sprite(self.spritesheet, SheetRegion::new(0, 0, 496, 4, 16, 16)),
-                Transform {
-                    x: rng.gen_range(8.0..(W - 8.0)),
-                    y: H + 8.0,
-                    w: APPLE_SIZE.x as u16,
-                    h: APPLE_SIZE.y as u16,
-                    rot: 0.0,
-                },
-                SolidPushable::default(),
-                BoxCollision(AABB {
-                    center: Vec2::ZERO,
-                    size: APPLE_SIZE,
-                }),
-                Physics {
-                    vel: Vec2 {
-                        x: 0.0,
-                        y: rng.gen_range(APPLE_SPEED_RANGE),
-                    },
-                },
-                Apple(),
-            ));
-            self.apple_timer = rng.gen_range(APPLE_INTERVAL);
+        } else if engine
+            .input
+            .is_mouse_pressed(winit::event::MouseButton::Left)
+        {
+            // let mouse_position = engine.input.mouse_pos();
+
+            let (mut mouseX, mut mouseY) = engine.mouse_localized(H);
+
+            println!("{}, {}", mouseX, mouseY);
+
+            for (glass, (sprite, trans, isBottle)) in engine
+            .world()
+            .query::<(&Sprite, &mut Transform, &bool)>()
+            .iter()
+            {
+                if trans.detectMouseCollision(mouseX as f64, mouseY as f64) {
+                    if glass == self.glass {
+                        self.glass_state = 0;
+                        self.pour = true;
+                        println!("empty glass: {}", self.glass_state);
+
+                        let sound = StaticSoundData::from_file(
+                            "content/sound/empty.mp3",
+                            StaticSoundSettings::default().volume(2.5),
+                        )
+                        .unwrap();
+    
+                        self.audio.play(sound);
+                    }
+                }
+            }
+
+            for (bottle, (sprite, trans, solid, collision, isBottle)) in engine
+                .world()
+                .query::<(&Sprite, &mut Transform, &Solid, &BoxCollision, &bool)>()
+                .iter()
+            {
+                if trans.detectMouseCollision(mouseX as f64, mouseY as f64) {
+                    self.held_bottle = Some(bottle);
+                    let sound = StaticSoundData::from_file(
+                        "content/sound/pick.mp3",
+                        StaticSoundSettings::default().volume(2.5),
+                    )
+                    .unwrap();
+
+                    self.audio.play(sound);
+                    
+                }
+            }
         }
     }
     fn handle_collisions(
@@ -178,33 +272,40 @@ impl engine::Game for Game {
         engine: &mut Engine,
         _contacts: impl Iterator<Item = engine::Contact>,
         triggers: impl Iterator<Item = engine::Contact>,
-    ) {
-        for engine::Contact(thing_a, thing_b, _amt) in triggers {
-            let ent_a = engine.world().entity(thing_a).unwrap();
-            let ent_b = engine.world().entity(thing_b).unwrap();
-            if ent_a.has::<Apple>() && ent_b.has::<Guy>() {
-                engine.despawn(thing_a).unwrap();
-                self.score += 1;
-            }
-        }
-    }
-    fn render(&mut self, engine: &mut Engine) {
-        engine.draw_string(
-            &self.font,
-            self.score.to_string(),
-            Vec2 {
-                x: 16.0,
-                y: H - 16.0,
-            },
-            16.0,
-        );
-    }
+    ) {}
+    fn render(&mut self, engine: &mut Engine) {}
 }
 fn main() {
     Engine::new(winit::window::WindowBuilder::new()).run();
 }
 
-fn make_wall(
+fn make_shelf(
+    spritesheet: engine_ecs::Spritesheet,
+    engine: &mut Engine,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+) {
+    let theBundle = EnvBundle(
+        Sprite(spritesheet, SHELF_UVS),
+        Transform {
+            x,
+            y,
+            w: w as u16,
+            h: h as u16,
+            rot: 0.0,
+        },
+        Solid::default(),
+        BoxCollision(AABB {
+            center: Vec2::ZERO,
+            size: Vec2 { x: 160.0, y: h },
+        }),
+    );
+
+    engine.spawn(theBundle);
+}
+fn make_bar(
     spritesheet: engine_ecs::Spritesheet,
     engine: &mut Engine,
     x: f32,
@@ -212,8 +313,35 @@ fn make_wall(
     w: f32,
     h: f32,
 ) -> Entity {
-    engine.spawn(WallBundle(
-        Sprite(spritesheet, WALL_UVS),
+    engine.spawn(EnvBundle(
+        Sprite(spritesheet, BAR_UVS),
+        Transform {
+            x,
+            y,
+            w: w as u16,
+            h: h as u16,
+            rot: 0.0,
+        },
+        Solid::default(),
+        BoxCollision(AABB {
+            center: Vec2::ZERO,
+            size: Vec2 { x: W, y: 47.0 },
+        }),
+    ))
+}
+
+fn make_bottle(
+    spritesheet: engine_ecs::Spritesheet,
+    engine: &mut Engine,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+    UVS: SheetRegion,
+    bottle: String
+) {
+    let theBundle = BottleBundle(
+        Sprite(spritesheet, UVS),
         Transform {
             x,
             y,
@@ -226,5 +354,40 @@ fn make_wall(
             center: Vec2::ZERO,
             size: Vec2 { x: w, y: h },
         }),
+        true,
+        bottle
+    );
+
+    engine.spawn(theBundle);
+}
+
+fn make_glass(
+    spritesheet: engine_ecs::Spritesheet,
+    engine: &mut Engine,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+) -> Entity {
+    engine.spawn(GlassBundle(
+        Sprite(spritesheet, GLASS_UVS),
+        Transform {
+            x,
+            y,
+            w: w as u16,
+            h: h as u16,
+            rot: 0.0,
+        },
+        true,
     ))
+}
+
+fn find_index_by_coordinates(
+    vector: &Vec<&BottleBundle>,
+    target_x: f32,
+    target_y: f32,
+) -> Option<usize> {
+    vector
+        .iter()
+        .position(|bundle| bundle.1.x == target_x && bundle.1.y == target_y)
 }
